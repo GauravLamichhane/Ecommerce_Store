@@ -6,6 +6,7 @@ from .models import (
     OrderItem,
     Product,
     Collection,
+    ProductImage,
     Review,
     Cart,
     CartItem,
@@ -206,3 +207,15 @@ class CreateOrderSerializer(serializers.Serializer):
 
             order_created.send_robust(self.__class__, order=order)
             return order
+
+
+class ProductImageSerialier(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ["id", "image"]
+
+    def create(self, validated_data):
+        product_id = self.context["product_id"]
+        return ProductImage.objects.create(
+            product_id=product_id, **validated_data
+        )  # **kwargs unpacks the dict into keyword arguements
