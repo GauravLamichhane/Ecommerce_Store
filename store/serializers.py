@@ -45,7 +45,26 @@ class CollectionSerializer(serializers.ModelSerializer):
 #     return product.unit_price * Decimal(1.1)
 
 
+class ProductImageSerialier(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ["id", "image"]
+
+    def create(self, validated_data):
+        product_id = self.context["product_id"]
+        return ProductImage.objects.create(
+            product_id=product_id, **validated_data
+        )  # **kwargs unpacks the dict into keyword arguements
+
+
 class ProductSerializer(serializers.ModelSerializer):
+    """
+    ProductSerializer reads product.images
+    then passes each object into ProductImageSerializer
+    """
+
+    images = ProductImageSerialier(many=True, read_only=True)
+
     class Meta:
         model = Product
         fields = [
@@ -57,6 +76,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "unit_price",
             "price_with_tax",
             "collection",
+            "images",
         ]
 
     price_with_tax = serializers.SerializerMethodField(method_name="calculate_tax")
@@ -207,15 +227,3 @@ class CreateOrderSerializer(serializers.Serializer):
 
             order_created.send_robust(self.__class__, order=order)
             return order
-
-
-class ProductImageSerialier(serializers.ModelSerializer):
-    class Meta:
-        model = ProductImage
-        fields = ["id", "image"]
-
-    def create(self, validated_data):
-        product_id = self.context["product_id"]
-        return ProductImage.objects.create(
-            product_id=product_id, **validated_data
-        )  # **kwargs unpacks the dict into keyword arguements
