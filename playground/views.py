@@ -5,11 +5,11 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count, Min, Max, Avg, Sum
 from django.db.models import Q, F, Value, Func, ExpressionWrapper, DecimalField
 from django.contrib.contenttypes.models import ContentType
+from templated_mail.mail import BaseEmailMessage
 from store.models import Product
 from tags.models import TaggedItem
 from store.models import Product, Order, OrderItem, Customer, Collection
-from templated_mail.mail import BaseEmailMessage
-
+from .tasks import notify_customers
 # def say_hello(request):
 #     # result = Order.objects.aggregate(count = Count('id'))
 #     # result = OrderItem.objects.filter(product__id=1).aggregate(quantiy_counts = Sum('quantity'))
@@ -74,11 +74,5 @@ from templated_mail.mail import BaseEmailMessage
 
 
 def say_hello(request):
-    try:
-        message = BaseEmailMessage(
-            template_name="emails/hello.html", context={"name": "gaurav"}
-        )
-        message.send(["gaurav@gg.com"])
-    except BadHeaderError:
-        pass
+    notify_customers.delay('Hello')
     return render(request, "hello.html", {"name": "Gaurav"})
