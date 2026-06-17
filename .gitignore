@@ -8,3 +8,4 @@ media/
 staticfiles/
 node_modules/
 dist/
+celerybeat-schedule
