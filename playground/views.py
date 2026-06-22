@@ -1,4 +1,7 @@
 import requests
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 from django.core.mail import send_mail, mail_admins, BadHeaderError, EmailMessage
 from django.shortcuts import render
 from django.db import transaction
@@ -6,6 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Count, Min, Max, Avg, Sum
 from django.db.models import Q, F, Value, Func, ExpressionWrapper, DecimalField
 from django.contrib.contenttypes.models import ContentType
+from rest_framework.views import APIView
 from templated_mail.mail import BaseEmailMessage
 from store.models import Product
 from tags.models import TaggedItem
@@ -74,7 +78,28 @@ from .tasks import notify_customers
 #     return render(request, "hello.html", {"name": "gaurav"})
 
 
-def say_hello(request):
-    # notify_customers.delay('Hello')
-    requests.get("https://httpbin.org/delay/2/")
-    return render(request, "hello.html", {"name": "Gaurav"})
+# def say_hello(request):
+#     # notify_customers.delay('Hello')
+#     key = 'httpbin_result'
+#     if cache.get(key) is None:
+#         response = requests.get('https://httpbin.org/delay/2')
+#         data = response.json()
+#         cache.set(key, data)
+#     return render(request, "hello.html", {"name": cache.get(key)})
+
+""" Using @cache_page decorate to cache the view"""
+
+# @cache_page(5 * 60)
+# def say_hello(request):
+#   response = requests.get('https://httpbin.org/delay/2')
+#   data = response.json()
+#   return render(request, 'hello.html', {"name":data})
+
+"""caching for class based views"""
+class HelloAPIView(APIView):
+  @method_decorator(cache_page(5 * 60))
+  def get(self, request):
+    response = requests.get('https://httpbin.org/delay/2')
+    data = response.json()
+    return render(request, 'hello.html', {"name":data})
+  
