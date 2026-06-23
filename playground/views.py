@@ -1,4 +1,5 @@
 import requests
+import logging
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.core.cache import cache
@@ -95,11 +96,21 @@ from .tasks import notify_customers
 #   data = response.json()
 #   return render(request, 'hello.html', {"name":data})
 
+logger = logging.getLogger(__name__)
+
+
 """caching for class based views"""
 class HelloAPIView(APIView):
-  @method_decorator(cache_page(5 * 60))
+  # @method_decorator(cache_page(5 * 60))
   def get(self, request):
-    response = requests.get('https://httpbin.org/delay/2')
-    data = response.json()
-    return render(request, 'hello.html', {"name":data})
-  
+    try:
+      logger.info("Calling httpbin")
+      response = requests.get("https://httpbin.org/delay/2", timeout=5)
+      response.raise_for_status()
+      logger.info("receive the response")
+      data = response.json()
+    except (requests.ConnectionError, requests.Timeout):
+      logger.critical("Connection error httpbin is offline or timed out")
+    except ValueError:
+      logger.exception("httpbin returned a non-JSON response")
+    return render(request, "hello.html", {"name":'gaurav'})
