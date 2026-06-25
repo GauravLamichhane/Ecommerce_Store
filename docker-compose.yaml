@@ -1,0 +1,101 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: storefront
+      POSTGRES_USER: storefront
+      POSTGRES_PASSWORD: storefront
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    restart: unless-stopped
+    command: sh -c "python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: storefront.settings.dev
+      DB_NAME: storefront
+      DB_USER: storefront
+      DB_PASSWORD: storefront
+      DB_HOST: db
+      DB_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/1
+      REDIS_CACHE_URL: redis://redis:6379/2
+    depends_on:
+      - db
+      - redis
+
+  celery-worker:
+    build: .
+    restart: unless-stopped
+    command: celery -A storefront worker -l info
+    volumes:
+      - .:/app
+    environment:
+      DJANGO_SETTINGS_MODULE: storefront.settings.dev
+      DB_NAME: storefront
+      DB_USER: storefront
+      DB_PASSWORD: storefront
+      DB_HOST: db
+      DB_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/1
+      REDIS_CACHE_URL: redis://redis:6379/2
+    depends_on:
+      - db
+      - redis
+
+  celery-beat:
+    build: .
+    restart: unless-stopped
+    command: celery -A storefront beat -l info
+    volumes:
+      - .:/app
+    environment:
+      DJANGO_SETTINGS_MODULE: storefront.settings.dev
+      DB_NAME: storefront
+      DB_USER: storefront
+      DB_PASSWORD: storefront
+      DB_HOST: db
+      DB_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/1
+      REDIS_CACHE_URL: redis://redis:6379/2
+    depends_on:
+      - db
+      - redis
+
+  flower:
+    build: .
+    restart: unless-stopped
+    command: celery -A storefront flower --port=5555
+    volumes:
+      - .:/app
+    ports:
+      - "5555:5555"
+    environment:
+      DJANGO_SETTINGS_MODULE: storefront.settings.dev
+      DB_NAME: storefront
+      DB_USER: storefront
+      DB_PASSWORD: storefront
+      DB_HOST: db
+      DB_PORT: 5432
+      CELERY_BROKER_URL: redis://redis:6379/1
+      REDIS_CACHE_URL: redis://redis:6379/2
+    depends_on:
+      - db
+      - redis
+
+volumes:
+  postgres_data:
