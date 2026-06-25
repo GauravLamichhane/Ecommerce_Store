@@ -16,19 +16,9 @@ from decouple import config
 from datetime import timedelta
 from celery.schedules import crontab
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-DEBUG = config("DEBUG", cast=bool)
-
-SECRET_KEY = config("SECRET_KEY")
-# SECURITY WARNING: don't run with debug turned on in production!
-
-ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -42,10 +32,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "djoser",
-    "debug_toolbar",
     "rest_framework",
     "django_filters",
-    "silk",
 
     "playground",
     "store",
@@ -56,8 +44,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
-    # "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -66,10 +54,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-if DEBUG:
-  MIDDLEWARE += [
-    'silk.middleware.SilkyMiddleware',
-  ]
+# if DEBUG:
+#   MIDDLEWARE += [
+#     'silk.middleware.SilkyMiddleware',
+#   ]
 
 ROOT_URLCONF = "storefront.urls"
 
@@ -102,16 +90,6 @@ WSGI_APPLICATION = "storefront.wsgi.application"
 # }
 from decouple import config
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("DB_NAME"),
-        "USER": config("DB_USER"),
-        "PASSWORD": config("DB_PASSWORD"),
-        "HOST": config("DB_HOST"),
-        "PORT": config("DB_PORT", cast=int),
-    }
-}
 
 
 # Password validation
@@ -149,6 +127,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 
@@ -190,8 +170,8 @@ EMAIL_BACKEND = config(
     "EMAIL_BACKEND",
     default=(
         "django.core.mail.backends.console.EmailBackend"
-        if DEBUG
-        else "django.core.mail.backends.smtp.EmailBackend"
+        # if DEBUG
+        # else "django.core.mail.backends.smtp.EmailBackend"
     ),
 )
 EMAIL_HOST = config("EMAIL_HOST", default="localhost")
@@ -202,7 +182,7 @@ EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=False, cast=bool)
 EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=False, cast=bool)
 DEFAULT_FROM_EMAIL = "from@gaurav.com"
 
-CELERY_BROKER_URL = 'redis://localhost:6379/1'
+CELERY_BROKER_URL = config("CELERY_BROKER_URL", default="redis://localhost:6379/1")
 CELERY_BEAT_SCHEDULE = {
   'notify_customers': {
     'task':'playground.tasks.notify_customers',
@@ -215,9 +195,35 @@ CELERY_BEAT_SCHEDULE = {
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/2",
+        "LOCATION": config("REDIS_CACHE_URL", default="redis://127.0.0.1:6379/2"),
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         }
     }
+}
+
+
+LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+                'console': {
+                        'class': 'logging.StreamHandler'
+                },
+                'file': {
+                        'class': 'logging.FileHandler',
+                        'filename': os.path.join(BASE_DIR, 'general.log'),
+                        'formatter': 'verbose'
+                }
+        },
+        'formatters': {
+                'verbose': {
+                        'format': '{asctime} ({levelname}) - {name} - {message}',
+                        'style': '{' #str.format()
+                }
+        },
+        'root': {
+                'handlers': ['console', 'file'],
+                'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO')
+        }
 }

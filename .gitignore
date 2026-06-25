@@ -25,3 +25,6 @@ coverage.xml
 Thumbs.db
 desktop.ini
 .ropeproject/
+/media/
+/static/
+general.log
